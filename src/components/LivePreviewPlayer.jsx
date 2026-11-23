@@ -31,6 +31,7 @@ export default function LivePreviewPlayer({
   setTweetCardSettings,
   tweetAvatarImgElement,
   onClearTweetAvatar,
+  branding = false,
 }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -254,6 +255,7 @@ export default function LivePreviewPlayer({
           filename: videoItem?.file?.name || 'video.mp4',
           index: videoItem?.queueIndex || 0,
         },
+        branding,
       });
     } else {
       ctx.clearRect(0, 0, width, height);
@@ -265,7 +267,7 @@ export default function LivePreviewPlayer({
         } catch (e) {}
       }
     }
-  }, [showOverlays, isTwitterFrame, captionSettings, captionX, captionY, watermarkSettings, watermarkX, watermarkY, watermarkImgElement, tweetCardSettings, tweetX, tweetY, tweetAvatarImgElement, videoItem]);
+  }, [showOverlays, isTwitterFrame, captionSettings, captionX, captionY, watermarkSettings, watermarkX, watermarkY, watermarkImgElement, tweetCardSettings, tweetX, tweetY, tweetAvatarImgElement, videoItem, branding]);
 
   // Loop requestAnimationFrame while playing or settings update
   useEffect(() => {

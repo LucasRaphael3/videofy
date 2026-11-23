@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlaskConical, Play, Loader2 } from 'lucide-react';
+import { FlaskConical, Play, Loader2, LogOut } from 'lucide-react';
 
 export default function Header({
   totalVideos,
@@ -8,7 +8,10 @@ export default function Header({
   isGeneratingSamples,
   onStartBatch,
   isProcessing,
-  hasActiveQueue
+  hasActiveQueue,
+  account,
+  onSignIn,
+  onShowPlans,
 }) {
   return (
     <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-slate-950/95 backdrop-blur-sm">
@@ -54,7 +57,37 @@ export default function Header({
             )}
           </div>
 
+          {account && (
+            <div className="flex items-center gap-2 h-9 text-xs">
+              {account.isAuthConfigured && !account.session ? (
+                <button type="button" onClick={onSignIn} className="h-9 px-2 text-slate-300 hover:text-slate-100">
+                  Entrar
+                </button>
+              ) : (
+                <>
+                  <span className="text-slate-400 hidden sm:inline max-w-40 truncate" title={account.email || undefined}>
+                    {account.email || 'Modo local'}
+                  </span>
+                  <span className="px-2 py-1 rounded-md border border-white/[0.08] text-slate-300">
+                    {account.plan.label}
+                  </span>
+                  {account.plan.id === 'free' && (
+                    <button type="button" onClick={onShowPlans} className="h-9 px-2 text-accent hover:text-[#f7b23f]">
+                      Ver planos
+                    </button>
+                  )}
+                  {account.session && (
+                    <button type="button" onClick={account.signOut} className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-100 hover:bg-white/5" aria-label="Sair" title="Sair">
+                      <LogOut className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           <button
+            id="start-batch"
             onClick={onStartBatch}
             disabled={!hasActiveQueue || isProcessing}
             className="btn-primary text-sm h-9 px-4"

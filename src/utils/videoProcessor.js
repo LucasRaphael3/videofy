@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
+import { createFile, MP4BoxBuffer, DataStream, Endianness } from 'mp4box';
 
 export function isWebCodecsSupported() {
   return typeof window !== 'undefined' &&
@@ -10,30 +11,33 @@ export function isWebCodecsSupported() {
 export const EXPORT_QUALITY_PRESETS = {
   ultra: {
     id: 'ultra',
-    label: 'Ultra (1080p 60fps)',
-    sublabel: 'Qualidade máxima WebCodecs Pro (18 Mbps H.264)',
+    label: 'Ultra (1080p)',
+    sublabel: 'Bitrate máximo, mantém o fps original até 60 (18 Mbps H.264)',
     bitrate: 18_000_000,
-    fps: 60,
+    fps: 60, // used when the source rate is unknown (seek fallback)
+    maxFps: 60,
     shortEdge: 1080, // Full HD short side (1080x1920 or 1920x1080)
     targetQualityFactor: 1.0,
     sizeEstimate: '~50-90 MB/min'
   },
   high: {
     id: 'high',
-    label: 'Alta (1080p 30fps)',
-    sublabel: 'Recomendado para TikTok & Reels (12 Mbps H.264)',
+    label: 'Alta (1080p)',
+    sublabel: 'Recomendado para TikTok e Reels, mantém o fps original até 60 (12 Mbps H.264)',
     bitrate: 12_000_000,
     fps: 30,
+    maxFps: 60,
     shortEdge: 1080, // Full HD short side (1080x1920 or 1920x1080)
     targetQualityFactor: 1.0,
     sizeEstimate: '~30-55 MB/min'
   },
   balanced: {
     id: 'balanced',
-    label: 'Equilibrada (720p 30fps)',
-    sublabel: '720p HD nativo sem perdas (6 Mbps H.264)',
+    label: 'Equilibrada (720p)',
+    sublabel: '720p, mantém o fps original até 60 (6 Mbps H.264)',
     bitrate: 6_000_000,
     fps: 30,
+    maxFps: 60,
     shortEdge: 720, // 720x1280 or 1280x720
     targetQualityFactor: 0.72,
     sizeEstimate: '~15-30 MB/min'
@@ -41,9 +45,10 @@ export const EXPORT_QUALITY_PRESETS = {
   economy: {
     id: 'economy',
     label: 'Econômica (540p 30fps)',
-    sublabel: 'Rascunho ultrarrápido (3 Mbps H.264)',
+    sublabel: 'Rascunho rápido (3 Mbps H.264)',
     bitrate: 3_000_000,
     fps: 30,
+    maxFps: 30,
     shortEdge: 540, // 540x960 or 960x540
     targetQualityFactor: 0.54,
     sizeEstimate: '~8-15 MB/min'
@@ -586,7 +591,8 @@ export function renderVideoScene(ctx, width, height, video, {
   watermarkImgElement,
   tweetCardSettings,
   tweetAvatarImgElement,
-  videoMeta = {}
+  videoMeta = {},
+  branding = false,
 }) {
   // Always clear entire canvas first to eliminate any trailing streaks or ghost copies
   ctx.clearRect(0, 0, width, height);
@@ -612,6 +618,7 @@ export function renderVideoScene(ctx, width, height, video, {
 
     // Draw Captions and Watermark
     drawOverlays(ctx, width, height, { captionSettings, watermarkSettings, watermarkImgElement, videoMeta });
+    if (branding) drawVideofyBranding(ctx, width, height, watermarkSettings);
   } else {
     // 9:16 Vertical Viral Social Frame Mode (e.g. TikTok / Reels / Shorts)
     // 1. Fill Background
@@ -655,8 +662,8 @@ export function renderVideoScene(ctx, width, height, video, {
     }
 
     // 2. Compute Card & Video Placement Metrics
-    const vSourceWidth = (video && (video.videoWidth || video.width)) || 1080;
-    const vSourceHeight = (video && (video.videoHeight || video.height)) || 1920;
+    const vSourceWidth = (video && (video.videoWidth || video.displayWidth || video.width)) || 1080;
+    const vSourceHeight = (video && (video.videoHeight || video.displayHeight || video.height)) || 1920;
 
     const videoMetrics = computeCardVideoMetrics({
       width,
@@ -697,7 +704,50 @@ export function renderVideoScene(ctx, width, height, video, {
 
     // 5. Draw optional watermark & captions
     drawOverlays(ctx, width, height, { captionSettings, watermarkSettings, watermarkImgElement, videoMeta });
+    if (branding) drawVideofyBranding(ctx, width, height, watermarkSettings);
   }
+}
+
+/**
+ * Free-plan mark: a small "feito com Videofy" badge in a top corner.
+ * Uses the corner the user's own watermark is not in.
+ */
+export function drawVideofyBranding(ctx, width, height, watermarkSettings) {
+  const unit = Math.min(width, height);
+  const fontSize = Math.max(12, Math.round(unit * 0.026));
+  const padX = Math.round(fontSize * 0.7);
+  const padY = Math.round(fontSize * 0.45);
+  const dot = Math.round(fontSize * 0.42);
+  const gap = Math.round(fontSize * 0.4);
+  const margin = Math.round(unit * 0.04);
+
+  ctx.save();
+  ctx.font = `500 ${fontSize}px Geist, Inter, system-ui, sans-serif`;
+  ctx.textBaseline = 'middle';
+  const label = 'feito com Videofy';
+  const textW = ctx.measureText(label).width;
+  const boxW = Math.round(padX * 2 + dot + gap + textW);
+  const boxH = Math.round(fontSize + padY * 2);
+
+  const wmAnchor = watermarkSettings?.anchor || 'top-right';
+  const useRight = wmAnchor === 'top-left';
+  const x = useRight ? width - margin - boxW : margin;
+  const y = margin;
+
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = 'rgba(20, 20, 21, 0.72)';
+  roundRect(ctx, x, y, boxW, boxH, Math.round(boxH / 2));
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#f5a524';
+  ctx.beginPath();
+  ctx.arc(x + padX + dot / 2, y + boxH / 2, dot / 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#ededed';
+  ctx.fillText(label, x + padX + dot + gap, y + boxH / 2 + 1);
+  ctx.restore();
 }
 
 /**
@@ -968,6 +1018,203 @@ export function drawOverlays(ctx, width, height, { captionSettings, watermarkSet
  * Encodes video directly to hardware-accelerated H.264 / AVC and AAC audio using mp4-muxer.
  * Completely eliminates dropped frames, rate-control stutter, and detached element throttling.
  */
+/**
+ * Demuxes the first video track of an MP4/MOV buffer.
+ * Returns null when the buffer is not ISO-BMFF or has no video track.
+ */
+function demuxMp4VideoTrack(arrayBuffer) {
+  const mp4 = createFile();
+  let track = null;
+  const samples = [];
+  mp4.onError = () => {};
+  mp4.onReady = (info) => {
+    track = info.videoTracks && info.videoTracks[0];
+    if (!track) return;
+    mp4.setExtractionOptions(track.id, null, { nbSamples: Infinity });
+    mp4.start();
+  };
+  mp4.onSamples = (_id, _user, batch) => {
+    for (const s of batch) samples.push(s);
+  };
+  mp4.appendBuffer(MP4BoxBuffer.fromArrayBuffer(arrayBuffer, 0));
+  mp4.flush();
+  if (!track || samples.length === 0) return null;
+
+  let description;
+  const trak = mp4.getTrackById(track.id);
+  for (const entry of trak.mdia.minf.stbl.stsd.entries) {
+    const box = entry.avcC || entry.hvcC || entry.vpcC || entry.av1C;
+    if (box) {
+      const stream = new DataStream(undefined, 0, Endianness.BIG_ENDIAN);
+      box.write(stream);
+      description = new Uint8Array(stream.buffer, 8); // skip box header
+      break;
+    }
+  }
+  return { track, samples, description };
+}
+
+function trackRotationDegrees(matrix) {
+  if (!matrix || matrix.length < 2) return 0;
+  const deg = Math.round((Math.atan2(matrix[1], matrix[0]) * 180) / Math.PI);
+  return ((deg % 360) + 360) % 360;
+}
+
+/**
+ * Frame-accurate source for MP4/MOV files: demux + VideoDecoder, decoded in order.
+ * getFrameAt(tUs) returns the frame on screen at time t (last frame with pts <= t),
+ * so every output frame maps to the right source frame with no seeking.
+ * Returns null when the file can't take this path (other container, rotation, codec).
+ */
+export async function createMp4FrameSource(arrayBuffer) {
+  if (typeof VideoDecoder === 'undefined' || typeof EncodedVideoChunk === 'undefined') return null;
+
+  let demuxed = null;
+  try {
+    demuxed = demuxMp4VideoTrack(arrayBuffer);
+  } catch (_) {
+    return null;
+  }
+  if (!demuxed) return null;
+
+  const { track, samples, description } = demuxed;
+  // Rotated phone footage: the <video> element applies the matrix, decoded frames don't.
+  if (trackRotationDegrees(track.matrix) !== 0) return null;
+
+  const config = {
+    codec: track.codec,
+    codedWidth: track.video ? track.video.width : track.track_width,
+    codedHeight: track.video ? track.video.height : track.track_height,
+    ...(description ? { description } : {}),
+  };
+  try {
+    const support = await VideoDecoder.isConfigSupported(config);
+    if (!support || !support.supported) return null;
+  } catch (_) {
+    return null;
+  }
+
+  // Normalize presentation timestamps so the first frame sits at 0
+  let minCts = Infinity;
+  let totalDur = 0;
+  const timescale = samples[0].timescale;
+  for (const s of samples) {
+    if (s.cts < minCts) minCts = s.cts;
+    totalDur += s.duration;
+  }
+  const durationUs = (totalDur * 1e6) / timescale;
+  // Median frame duration, not the average: variable-rate clips (phones, MediaRecorder)
+  // have dropped frames that drag the average down to odd rates like 27fps.
+  const durations = samples.map((s) => s.duration).filter((d) => d > 0).sort((x, y) => x - y);
+  const medianDur = durations.length ? durations[Math.floor(durations.length / 2)] : 0;
+  const fps = medianDur ? timescale / medianDur : samples.length / (durationUs / 1e6);
+
+  const queue = []; // decoded frames, presentation order
+  let current = null;
+  let decodeError = null;
+  let flushed = false;
+  let flushStarted = false;
+  let nextSample = 0;
+  let wake = null;
+  const notify = () => {
+    const w = wake;
+    wake = null;
+    if (w) w();
+  };
+
+  const decoder = new VideoDecoder({
+    output: (frame) => {
+      queue.push(frame);
+      notify();
+    },
+    error: (e) => {
+      decodeError = e;
+      notify();
+    },
+  });
+  decoder.configure(config);
+
+  const MAX_BUFFERED_FRAMES = 6; // hardware decoders have a small frame pool
+  const pump = () => {
+    while (
+      nextSample < samples.length &&
+      decoder.decodeQueueSize < 4 &&
+      queue.length < MAX_BUFFERED_FRAMES
+    ) {
+      const s = samples[nextSample++];
+      decoder.decode(new EncodedVideoChunk({
+        type: s.is_sync ? 'key' : 'delta',
+        timestamp: Math.round(((s.cts - minCts) * 1e6) / s.timescale),
+        duration: Math.round((s.duration * 1e6) / s.timescale),
+        data: s.data,
+      }));
+      s.data = undefined; // let the encoded bytes go
+    }
+    if (nextSample >= samples.length && !flushStarted) {
+      flushStarted = true;
+      decoder.flush().then(
+        () => { flushed = true; notify(); },
+        (e) => { decodeError = decodeError || e; flushed = true; notify(); }
+      );
+    }
+  };
+
+  const waitForOutput = () => new Promise((resolve) => {
+    wake = resolve;
+    setTimeout(notify, 25); // safety net, outputs normally wake us first
+  });
+
+  const TOLERANCE_US = 500;
+
+  async function getFrameAt(tUs) {
+    for (;;) {
+      if (decodeError) throw decodeError;
+      while (queue.length && queue[0].timestamp <= tUs + TOLERANCE_US) {
+        if (current) current.close();
+        current = queue.shift();
+      }
+      // The next queued frame is in the future, or there is nothing left: current is on screen
+      if (queue.length || flushed) {
+        if (current) return current;
+        if (queue.length) return queue[0];
+        throw new Error('Nenhum quadro decodificado.');
+      }
+      pump();
+      await waitForOutput();
+    }
+  }
+
+  function close() {
+    if (current) current.close();
+    current = null;
+    while (queue.length) queue.shift().close();
+    if (decoder.state !== 'closed') {
+      try { decoder.close(); } catch (_) {}
+    }
+  }
+
+  return {
+    width: config.codedWidth,
+    height: config.codedHeight,
+    fps,
+    durationUs,
+    getFrameAt,
+    close,
+  };
+}
+
+/** Output frame rate: keep the source rate (rounded) up to the preset's ceiling. */
+function pickOutputFps(sourceFps, preset) {
+  const cap = preset.maxFps || preset.fps || 30;
+  if (!sourceFps || !isFinite(sourceFps)) return preset.fps || 30;
+  // Snap to the nearest standard rate when close (29.97 -> 30, 59.94 -> 60)
+  const STANDARD = [24, 25, 30, 48, 50, 60];
+  let rate = Math.round(sourceFps);
+  const nearest = STANDARD.reduce((best, r) => (Math.abs(r - sourceFps) < Math.abs(best - sourceFps) ? r : best), STANDARD[0]);
+  if (Math.abs(nearest - sourceFps) / nearest < 0.08) rate = nearest;
+  return Math.max(1, Math.min(cap, rate));
+}
+
 export async function renderSingleVideoWebCodecs({
   file,
   index,
@@ -979,6 +1226,8 @@ export async function renderSingleVideoWebCodecs({
   exportQuality = 'high',
   onProgress,
   preserveAudio = true,
+  forceSeekPath = false,
+  branding = false,
 }) {
   const video = document.createElement('video');
   const objectUrl = URL.createObjectURL(file);
@@ -995,9 +1244,20 @@ export async function renderSingleVideoWebCodecs({
   let isTerminated = false;
   let videoEncoder = null;
   let audioEncoder = null;
+  let frameSource = null;
 
   const cleanup = () => {
     isTerminated = true;
+    if (frameSource) {
+      frameSource.close();
+      frameSource = null;
+    }
+    if (videoEncoder && videoEncoder.state !== 'closed') {
+      try { videoEncoder.close(); } catch (_) {}
+    }
+    if (audioEncoder && audioEncoder.state !== 'closed') {
+      try { audioEncoder.close(); } catch (_) {}
+    }
     URL.revokeObjectURL(objectUrl);
     video.pause();
     video.removeAttribute('src');
@@ -1040,8 +1300,17 @@ export async function renderSingleVideoWebCodecs({
     if (width % 2 !== 0) width -= 1;
     if (height % 2 !== 0) height -= 1;
 
-    const duration = video.duration || 1;
-    const fps = preset.fps || 30;
+    // Read the file once: shared by the frame decoder and the audio track
+    const fileBuffer = await file.arrayBuffer();
+
+    // Frame-accurate decoder for MP4/MOV; other containers fall back to seeking
+    if (!forceSeekPath) {
+      frameSource = await createMp4FrameSource(fileBuffer);
+    }
+    const renderPath = frameSource ? 'decoder' : 'seek';
+
+    const duration = (frameSource && frameSource.durationUs / 1e6) || video.duration || 1;
+    const fps = frameSource ? pickOutputFps(frameSource.fps, preset) : (preset.fps || 30);
     const totalFrames = Math.max(1, Math.round(duration * fps));
 
     // 2. Audio Extraction & Preparation
@@ -1052,7 +1321,7 @@ export async function renderSingleVideoWebCodecs({
 
     if (preserveAudio && typeof AudioEncoder !== 'undefined') {
       try {
-        const arrayBuffer = await file.arrayBuffer();
+        const arrayBuffer = fileBuffer;
         const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
         const tempAudioCtx = new AudioCtxClass();
         try {
@@ -1223,64 +1492,88 @@ export async function renderSingleVideoWebCodecs({
     canvas.height = height;
     const ctx = canvas.getContext('2d', { alpha: false });
 
-    // Video Seek Helper
+    // Fallback seek helper (WebM and anything the decoder path can't take).
+    // Resolves only once the seeked frame is actually presented, so a slow seek
+    // never lets the previous frame get encoded twice.
+    const waitForPresentedFrame = () => new Promise((resolve) => {
+      if (typeof video.requestVideoFrameCallback !== 'function') {
+        resolve();
+        return;
+      }
+      let done = false;
+      const handle = video.requestVideoFrameCallback(() => {
+        if (!done) { done = true; resolve(); }
+      });
+      setTimeout(() => {
+        if (!done) {
+          done = true;
+          if (typeof video.cancelVideoFrameCallback === 'function') video.cancelVideoFrameCallback(handle);
+          resolve();
+        }
+      }, 150);
+    });
+
     const seekVideo = (time) => {
       return new Promise((resolve) => {
-        if (Math.abs(video.currentTime - time) < 0.003) {
+        const target = Math.min(time, Math.max(0, video.duration - 0.001));
+        if (Math.abs(video.currentTime - target) < 0.0005) {
           resolve();
           return;
         }
 
         let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          video.removeEventListener('seeked', onSeeked);
+          resolve();
+        };
         const onSeeked = () => {
-          if (!done) {
-            done = true;
-            video.removeEventListener('seeked', onSeeked);
-            resolve();
-          }
+          waitForPresentedFrame().then(finish);
         };
 
-        video.addEventListener('seeked', onSeeked, { once: true });
-        video.currentTime = Math.min(time, Math.max(0, video.duration - 0.001));
-
-        setTimeout(() => {
-          if (!done) {
-            done = true;
-            video.removeEventListener('seeked', onSeeked);
-            resolve();
-          }
-        }, 350);
+        video.addEventListener('seeked', onSeeked);
+        video.currentTime = target;
+        // Long safety net: a slow seek must not be cut short
+        setTimeout(finish, 4000);
       });
     };
 
     // 7. Deterministic Frame Loop
-    const frameIntervalUs = Math.round(1_000_000 / fps);
     const keyFrameInterval = fps * 2; // Keyframe every 2 seconds
+    const frameTimestampUs = (i) => Math.round((i * 1_000_000) / fps);
 
     for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
       if (isTerminated) throw new Error('Renderização cancelada.');
       if (encoderError) throw encoderError;
 
-      const targetTime = frameIndex / fps;
-      await seekVideo(targetTime);
+      const timestampUs = frameTimestampUs(frameIndex);
+      const frameDurationUs = frameTimestampUs(frameIndex + 1) - timestampUs;
+
+      let sourceImage = video;
+      if (frameSource) {
+        sourceImage = await frameSource.getFrameAt(timestampUs);
+      } else {
+        // +1ms keeps float rounding from landing on the previous source frame
+        await seekVideo(timestampUs / 1e6 + 0.001);
+      }
 
       // Render entire scene (9:16 frame, Twitter Card, Video crop, Safe Zones, Watermark, Captions)
-      renderVideoScene(ctx, width, height, video, {
+      renderVideoScene(ctx, width, height, sourceImage, {
         captionSettings,
         watermarkSettings,
         watermarkImgElement,
         tweetCardSettings,
         tweetAvatarImgElement,
         videoMeta: { filename: file.name, index },
+        branding,
       });
 
-      // Construct high-precision VideoFrame
-      const timestampUs = frameIndex * frameIntervalUs;
       const isKeyFrame = (frameIndex % keyFrameInterval) === 0;
 
       const videoFrame = new VideoFrame(canvas, {
         timestamp: timestampUs,
-        duration: frameIntervalUs,
+        duration: frameDurationUs,
       });
 
       videoEncoder.encode(videoFrame, { keyFrame: isKeyFrame });
@@ -1318,6 +1611,8 @@ export async function renderSingleVideoWebCodecs({
       extension: 'mp4',
       originalName: file.name,
       size: blob.size,
+      fps,
+      path: renderPath,
     };
 
   } catch (err) {
@@ -1340,6 +1635,7 @@ export async function renderSingleVideoMediaRecorder({
   exportQuality = 'high',
   onProgress,
   preserveAudio = true,
+  branding = false,
 }) {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
@@ -1464,6 +1760,7 @@ export async function renderSingleVideoMediaRecorder({
               tweetCardSettings,
               tweetAvatarImgElement,
               videoMeta: { filename: file.name, index },
+        branding,
             });
 
             const progress = Math.min(99, Math.round((video.currentTime / duration) * 100));
@@ -1488,6 +1785,7 @@ export async function renderSingleVideoMediaRecorder({
               tweetCardSettings,
               tweetAvatarImgElement,
               videoMeta: { filename: file.name, index },
+        branding,
             });
           } catch (_) {}
 
@@ -1547,6 +1845,8 @@ export async function processBatchConcurrently({
   tweetAvatarImgElement,
   exportQuality = 'high',
   concurrency = 2,
+  preserveAudio = true,
+  branding = false,
   onItemProgress,
   onItemComplete,
   onItemError,
@@ -1582,6 +1882,8 @@ export async function processBatchConcurrently({
               tweetCardSettings,
               tweetAvatarImgElement,
               exportQuality,
+              preserveAudio,
+              branding,
               onProgress: (percent) => {
                 if (onItemProgress) {
                   onItemProgress(item.id, percent, 'rendering');
