@@ -46,7 +46,8 @@ export default function GlobalModifiers({
   concurrency,
   setConcurrency,
   preserveAudio,
-  setPreserveAudio
+  setPreserveAudio,
+  lockedQualities = [],
 }) {
   const logoInputRef = useRef(null);
   const avatarInputRef = useRef(null);
@@ -685,12 +686,17 @@ export default function GlobalModifiers({
                         : 'bg-slate-900/60 border-white/10 hover:border-white/20 hover:bg-slate-900/90 text-slate-300'
                     }`}
                   >
-                    <div className="text-xs font-medium text-white mb-0.5">{preset.label}</div>
+                    <div className="text-xs font-medium text-white mb-0.5 flex items-center justify-between gap-2">
+                      {preset.label}
+                      {lockedQualities.includes(preset.id) && (
+                        <span className="text-[11px] font-normal text-slate-500">Plano pago</span>
+                      )}
+                    </div>
                     <div className="text-[11px] text-slate-400 mb-2 leading-tight">{preset.sublabel}</div>
 
                     <div className="flex items-center gap-2 text-[11px] font-mono">
                       <span className="px-1.5 py-0.5 rounded bg-slate-950/60 text-slate-300 border border-white/[0.08]">
-                        {preset.bitrate / 1_000_000} Mbps • {preset.fps} FPS
+                        {preset.bitrate / 1_000_000} Mbps · até {preset.maxFps || preset.fps} fps
                       </span>
                       <span className="text-slate-400 font-sans">
                         {preset.sizeEstimate}

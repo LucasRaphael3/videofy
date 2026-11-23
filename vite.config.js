@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { fileURLToPath } from 'node:url';
+
+const page = (path) => fileURLToPath(new URL(path, import.meta.url));
 
 const downloadCache = new Map();
 
@@ -62,6 +65,16 @@ export default defineConfig({
       },
     },
   ],
+  // Pages: landing at /, editor at /app/, login return at /auth/callback.html
+  build: {
+    rollupOptions: {
+      input: {
+        landing: page('./index.html'),
+        app: page('./app/index.html'),
+        authCallback: page('./auth/callback.html'),
+      },
+    },
+  },
   server: {
     port: 5173,
     host: true,

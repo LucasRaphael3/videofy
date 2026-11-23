@@ -2,16 +2,237 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f5a524'><path d='M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm10 8-5-3.5v7l5-3.5z'/></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Videofy</title>
-    <!-- Interface: Geist + Geist Mono. Caption/tweet fonts drawn on the canvas: Anton, Bebas Neue, Inter, Montserrat, Oswald -->
+    <title>Videofy · Cortes prontos para postar, em lote</title>
+    <meta name="description" content="Aplique legenda, marca d'água e card do X em dezenas de cortes de uma vez. O Videofy renderiza no seu computador, sem enviar seus vídeos para servidor." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f5a524'><path d='M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm10 8-5-3.5v7l5-3.5z'/></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;700;800;900&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased">
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+  <body>
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a href="/" class="logo" aria-label="Videofy, início">
+          <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" /></svg></span>
+          Videofy
+        </a>
+        <nav class="nav-links" aria-label="Seções">
+          <a href="#como-funciona">Como funciona</a>
+          <a href="#precos">Preços</a>
+          <a href="#perguntas">Perguntas</a>
+        </nav>
+        <a href="/app/" class="btn btn-primary btn-sm">Abrir o editor</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <h1>Legenda, marca d'água e card do X em todos os cortes de uma vez</h1>
+            <p class="lede">Você escolhe os cortes. O Videofy aplica a mesma identidade em todos e renderiza no seu computador, em 1080p e no fps original. Nenhum vídeo é enviado para servidor.</p>
+            <div class="actions">
+              <a href="/app/" class="btn btn-primary">Abrir o editor grátis</a>
+              <a href="#fundador" class="btn btn-secondary" data-founder-link>Garantir vaga de Fundador</a>
+            </div>
+            <p class="fine">Grátis para lotes de até 5 cortes. Funciona no Chrome e no Edge.</p>
+          </div>
+
+          <!-- Product view: one batch mid-render -->
+          <div class="batch" aria-label="Exemplo de um lote sendo renderizado">
+            <div class="batch-head">
+              <span class="rec"><span class="rec-dot" aria-hidden="true"></span>Renderizando lote</span>
+              <span class="tc muted">03 / 06 prontos</span>
+            </div>
+            <div class="cuts">
+              <figure class="cut done" style="--tone: #3b4a3f">
+                <div class="frame"><span class="handle">@cortesdopod</span><span class="cap">ele não esperava essa</span></div>
+                <figcaption><span class="tc">corte_01.mp4</span><span class="state ok">Pronto</span></figcaption>
+              </figure>
+              <figure class="cut done" style="--tone: #4a3b3b">
+                <div class="frame"><span class="handle">@cortesdopod</span><span class="cap">a resposta veio na hora</span></div>
+                <figcaption><span class="tc">corte_02.mp4</span><span class="state ok">Pronto</span></figcaption>
+              </figure>
+              <figure class="cut done" style="--tone: #3b4152">
+                <div class="frame"><span class="handle">@cortesdopod</span><span class="cap">espera até o final</span></div>
+                <figcaption><span class="tc">corte_03.mp4</span><span class="state ok">Pronto</span></figcaption>
+              </figure>
+              <figure class="cut active" style="--tone: #52483b">
+                <div class="frame"><span class="handle">@cortesdopod</span><span class="cap">ninguém acreditou</span><span class="bar" style="--p: 64%"></span></div>
+                <figcaption><span class="tc">corte_04.mp4</span><span class="state tc">64%</span></figcaption>
+              </figure>
+              <figure class="cut queued" style="--tone: #3e3b52">
+                <div class="frame"><span class="handle">@cortesdopod</span><span class="cap">o melhor momento</span></div>
+                <figcaption><span class="tc">corte_05.mp4</span><span class="state">Na fila</span></figcaption>
+              </figure>
+              <figure class="cut queued" style="--tone: #3b5250">
+                <div class="frame"><span class="handle">@cortesdopod</span><span class="cap">ficou sem palavras</span></div>
+                <figcaption><span class="tc">corte_06.mp4</span><span class="state">Na fila</span></figcaption>
+              </figure>
+            </div>
+            <div class="batch-foot tc muted">
+              <span>1080 × 1920</span><span>H.264</span><span>60 fps</span><span>12 Mbps</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="como-funciona" class="section">
+        <div class="wrap">
+          <h2>Três passos, qualquer quantidade de cortes</h2>
+          <ol class="steps">
+            <li>
+              <span class="step-n tc">01</span>
+              <h3>Solte os cortes</h3>
+              <p>Arraste os vídeos para a fila. MP4, MOV ou WebM, quantos precisar.</p>
+            </li>
+            <li>
+              <span class="step-n tc">02</span>
+              <h3>Ajuste uma vez</h3>
+              <p>Defina legenda, marca d'água e card do X no preview. A mesma configuração vale para o lote inteiro.</p>
+            </li>
+            <li>
+              <span class="step-n tc">03</span>
+              <h3>Renderize e baixe</h3>
+              <p>O lote renderiza no seu computador e sai em um ZIP, pronto para TikTok, Reels e Shorts.</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="wrap features">
+          <div class="feature-intro">
+            <h2>Feito para quem posta todo dia</h2>
+            <p class="muted">Canais de cortes, editores freelancers e social media que precisam que todo vídeo saia com a mesma cara.</p>
+          </div>
+          <dl class="feature-list">
+            <div><dt>Legenda com variáveis</dt><dd>Estilos prontos e campos como <code>{filename}</code> e <code>#{index}</code> para numerar a série.</dd></div>
+            <div><dt>Marca d'água</dt><dd>Seu @ em texto ou o seu logo, com canto, opacidade e margem.</dd></div>
+            <div><dt>Card do X</dt><dd>O vídeo dentro de um post do X em 9:16, com enquadramento e zoom.</dd></div>
+            <div><dt>Zonas seguras</dt><dd>Veja no preview onde ficam os botões do TikTok, do Reels e do Shorts.</dd></div>
+            <div><dt>Qualidade de origem</dt><dd>Até 1080p, mantendo o fps original até 60, sem quadros repetidos.</dd></div>
+            <div><dt>Privado por padrão</dt><dd>O render acontece no navegador. Seus vídeos nunca saem do computador.</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <section id="precos" class="section">
+        <div class="wrap">
+          <h2>Preços</h2>
+          <p class="muted section-lede">Sem cobrança por minuto. O render roda no seu computador, então não limitamos quanto você exporta.</p>
+          <div class="plans">
+            <article class="plan">
+              <h3>Grátis</h3>
+              <p class="price tc">R$ 0</p>
+              <p class="plan-for">Para testar</p>
+              <ul>
+                <li>Até 5 cortes por lote</li>
+                <li>Até 720p</li>
+                <li>Marca "feito com Videofy"</li>
+              </ul>
+              <a href="/app/" class="btn btn-secondary">Abrir o editor</a>
+            </article>
+            <article class="plan lead">
+              <h3>Criador</h3>
+              <p class="price tc">R$ 29 <small>/mês</small></p>
+              <p class="plan-for">R$ 290 no anual</p>
+              <ul>
+                <li>Lotes sem limite</li>
+                <li>1080p, fps original até 60</li>
+                <li>Sem a marca do Videofy</li>
+                <li>Card do X e zonas seguras</li>
+              </ul>
+              <a href="/app/" class="btn btn-primary" data-checkout="creator">Assinar Criador</a>
+            </article>
+            <article class="plan">
+              <h3>Agência</h3>
+              <p class="price tc">R$ 79 <small>/mês</small></p>
+              <p class="plan-for">R$ 790 no anual</p>
+              <ul>
+                <li>Tudo do Criador</li>
+                <li>Até 3 pessoas na conta</li>
+                <li>Suporte no WhatsApp</li>
+              </ul>
+              <a href="/app/" class="btn btn-secondary" data-checkout="agency">Assinar Agência</a>
+            </article>
+            <article class="plan">
+              <h3>Fundador</h3>
+              <p class="price tc">R$ 397 <small>único</small></p>
+              <p class="plan-for">100 vagas, só no lançamento</p>
+              <ul>
+                <li>Plano Criador vitalício</li>
+                <li>Acesso antecipado a recursos</li>
+                <li>Canal direto com o desenvolvedor</li>
+              </ul>
+              <a href="#fundador" class="btn btn-secondary" data-founder-link>Garantir vaga</a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="fundador" class="section">
+        <div class="wrap signup">
+          <div>
+            <h2>Lista do Fundador</h2>
+            <p class="muted">As 100 vagas do plano vitalício abrem primeiro para quem está na lista. Avisamos por e-mail, sem spam.</p>
+          </div>
+          <form id="waitlist" class="form" novalidate>
+            <div class="field">
+              <label for="wl-email">E-mail</label>
+              <input id="wl-email" name="email" type="email" autocomplete="email" required placeholder="voce@exemplo.com" />
+            </div>
+            <div class="field">
+              <label for="wl-volume">Quantos cortes você posta por semana</label>
+              <select id="wl-volume" name="weekly_cuts">
+                <option value="">Escolha uma opção</option>
+                <option value="ate-10">Até 10</option>
+                <option value="10-50">De 10 a 50</option>
+                <option value="50-200">De 50 a 200</option>
+                <option value="200+">Mais de 200</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Entrar na lista</button>
+            <p id="wl-status" class="form-status" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+
+      <section id="perguntas" class="section">
+        <div class="wrap faq">
+          <h2>Perguntas</h2>
+          <details>
+            <summary>Meus vídeos são enviados para algum servidor?</summary>
+            <p>Não. O Videofy lê e renderiza os vídeos dentro do seu navegador. A conta guarda apenas o seu e-mail e o seu plano.</p>
+          </details>
+          <details>
+            <summary>Quais navegadores funcionam?</summary>
+            <p>Chrome e Edge atualizados, no computador. O Safari ainda tem suporte parcial às APIs de vídeo que o Videofy usa.</p>
+          </details>
+          <details>
+            <summary>Preciso de um computador potente?</summary>
+            <p>Não, mas um computador mais rápido renderiza mais rápido. Em máquinas antigas, a qualidade Econômica ajuda.</p>
+          </details>
+          <details>
+            <summary>Posso cancelar a assinatura?</summary>
+            <p>Sim, a qualquer momento. O plano continua ativo até o fim do período já pago.</p>
+          </details>
+          <details>
+            <summary>Quem responde pelos direitos do conteúdo?</summary>
+            <p>Você. O Videofy finaliza os vídeos que você escolhe; publique apenas conteúdo que você tem direito de usar.</p>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <span>Videofy</span>
+        <span class="muted">Renderizado no seu computador.</span>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/landing/main.js"></script>
   </body>
 </html>
